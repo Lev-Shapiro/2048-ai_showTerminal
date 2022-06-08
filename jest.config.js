@@ -1,8 +1,11 @@
 module.exports = {
-    preset: 'ts-jest',
-    testEnvironment: 'node',
+    preset: "ts-jest",
+    testEnvironment: "node",
     transform: {
-      '^.+\\.ts?$': 'ts-jest',
+        "^.+\\.ts?$": "ts-jest",
     },
-    transformIgnorePatterns: ['<rootDir>/node_modules/'],
-  };
+    collectCoverageFrom: [
+        "**/*.test.{ts,tsx}",
+    ],
+    transformIgnorePatterns: ["<rootDir>/node_modules/"],
+};

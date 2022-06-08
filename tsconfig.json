@@ -1,7 +1,17 @@
 {
-    "compilerOptions": {
-        "target": "es2015",
-        "module": "commonjs"
-    },
-    "include": ["node_modules"]
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "CommonJS",
+		"moduleResolution": "node",
+		"downlevelIteration": true,
+		"allowSyntheticDefaultImports": true,
+		"importHelpers": true,
+		"skipLibCheck": true,
+		"noEmitOnError": true,
+		"strict": false,
+		"alwaysStrict": false,
+		"noImplicitAny": false,
+		"typeRoots": ["node_modules/@types/"]
+	},
+	"exclude": ["node_modules"]
 }

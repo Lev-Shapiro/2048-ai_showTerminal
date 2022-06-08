@@ -2,10 +2,13 @@ import BoardCollapseController from "../controller/board-collapse.controller";
 import BoardFallController from "../controller/board-fall.controller";
 import { Board, BoardInformation } from "../entities/board.entity";
 import { Direction } from "../entities/direction.entity";
+import { Tile } from "../entities/tile.entity";
+import AgentModel from "./agent.model";
+import OpponentModel from "./opponent.model";
 
 export default class BoardModel extends BoardInformation {
     board: Board = [];
-
+    
     constructor() {
         super();
 
@@ -15,6 +18,14 @@ export default class BoardModel extends BoardInformation {
                 this.board[i].push(this.EMPTY);
             }
         }
+    }
+
+    copy(): BoardModel {
+        const board = new BoardModel();
+
+        board.board = this.board;
+
+        return board;
     }
 
     isEnded(): boolean {
@@ -33,65 +44,35 @@ export default class BoardModel extends BoardInformation {
         return score;
     }
 
-    copy(): BoardModel {
-        const board = new BoardModel();
-
-        board.board = this.board;
-
-        return board;
-    }
-
     findEmptyPlaces(): [number, number][] {
         let emptyPlaces = [];
 
         for (let i = 0; i < this.BOARD_SIZE; i++) {
             for (let j = 0; j < this.BOARD_SIZE; j++) {
-                if (this.board[i][j] == this.EMPTY) emptyPlaces.push([i, j]);
+                if (this.board[i][j] === this.EMPTY) emptyPlaces.push([i, j]);
             }
         }
 
         return emptyPlaces;
     }
 
-    // j - axisX,
-    // i - axisY
+    //? returns a value from 0 to 8
+    findMergesCount(direction: Direction): number {
+        const board = this.copy();
+        const emptyPlaces1 = board.findEmptyPlaces().length;
+        board.move(direction);
+        const emptyPlaces2 = board.findEmptyPlaces().length;
+        
+        return emptyPlaces2 - emptyPlaces1;
+    }
 
-    setTile(i: number, j: number, value: number) {
+    setTile([i, j, value]: Tile) {
         this.board[i][j] = value;
     }
 
-    /* 
-        * board random functions
-        ? Possibly can be replaced to another file
-    */
-
-    randomNewTile(): number {
-        const possibleValues = [2, 4];
-        return possibleValues[this.randomNumber(possibleValues.length)];
+    setTiles(tiles: Tile[]) {
+        tiles.forEach((tile) => this.setTile(tile))
     }
-
-    randomNumber(max: number): number {
-        return Math.floor(Math.random() * max);
-    }
-
-    addRandomNewTile(): void {
-        const emptyPlaces = this.findEmptyPlaces();
-
-        if (emptyPlaces.length > 0) {
-            const index = this.randomNumber(emptyPlaces.length);
-
-            this.setTile(
-                emptyPlaces[index][0],
-                emptyPlaces[index][1],
-                this.randomNewTile()
-            );
-        }
-    }
-
-    /*
-        * board rule functions   
-        ? Possibly can be replaced to another file
-    */
 
     fall(direction: Direction) {
         const controller = new BoardFallController(this.board);
@@ -131,15 +112,9 @@ export default class BoardModel extends BoardInformation {
         }
     }
 
-    action(direction: Direction): BoardModel {
-        const board = this.copy();
-
-        board.fall(direction);
-        board.collapse(direction);
-        board.fall(direction);
-
-        board.addRandomNewTile();
-
-        return board;
+    move(direction: Direction) {
+        this.fall(direction);
+        this.collapse(direction);
+        this.fall(direction);
     }
 }

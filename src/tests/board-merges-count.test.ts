@@ -1,11 +1,12 @@
 import { Direction } from "../domain/entities/direction.entity";
 import BoardModel from "../domain/models/board.model";
+import loopDirections from "../scripts/loop-directions.script";
 import BoardTestHelpersService from "./board-test-helpers.service";
 
 describe("calculate merges count", () => {
     const boardTests = new BoardTestHelpersService();
 
-    boardTests.loopDirections((direction) => {
+    loopDirections((direction) => {
         it(`merge count for ${direction} direction`, () => {
             boardTests.loopBoardTemplates((templateName, tiles) => {
                 const board = new BoardModel();

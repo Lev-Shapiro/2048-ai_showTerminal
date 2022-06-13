@@ -2,13 +2,12 @@ import BoardCollapseController from "../controller/board-collapse.controller";
 import BoardFallController from "../controller/board-fall.controller";
 import { Board, BoardInformation } from "../entities/board.entity";
 import { Direction } from "../entities/direction.entity";
+import { PlayStatus } from "../entities/play-status.entity";
 import { Tile } from "../entities/tile.entity";
-import AgentModel from "./agent.model";
-import OpponentModel from "./opponent.model";
 
 export default class BoardModel extends BoardInformation {
     board: Board = [];
-    
+
     constructor() {
         super();
 
@@ -23,13 +22,21 @@ export default class BoardModel extends BoardInformation {
     copy(): BoardModel {
         const board = new BoardModel();
 
-        board.board = this.board;
+        for (let i = 0; i < this.BOARD_SIZE; i++) {
+            board.board[i] = this.board[i].map((x) => x);
+        }
 
         return board;
     }
 
-    isEnded(): boolean {
-        return false;
+    checkPlayStatus(): PlayStatus | null {
+        for (let i = 0; i < this.board.length; i++) {
+            for (let j = 0; j < this.board[i].length; j++) {
+                if (this.board[i][j] == 2048) return PlayStatus.Victory;
+            }
+        }
+        if (this.findEmptyPlaces().length == 0) return PlayStatus.Loss;
+        return null;
     }
 
     totalScore(): number {
@@ -56,13 +63,17 @@ export default class BoardModel extends BoardInformation {
         return emptyPlaces;
     }
 
-    //? returns a value from 0 to 8
+    //* returns a value from 0 to 8
     findMergesCount(direction: Direction): number {
         const board = this.copy();
         const emptyPlaces1 = board.findEmptyPlaces().length;
-        board.move(direction);
+
+        this.fall(direction);
+        this.collapse(direction);
+        this.fall(direction);
+
         const emptyPlaces2 = board.findEmptyPlaces().length;
-        
+
         return emptyPlaces2 - emptyPlaces1;
     }
 
@@ -71,7 +82,7 @@ export default class BoardModel extends BoardInformation {
     }
 
     setTiles(tiles: Tile[]) {
-        tiles.forEach((tile) => this.setTile(tile))
+        tiles.forEach((tile) => this.setTile(tile));
     }
 
     fall(direction: Direction) {
@@ -101,7 +112,7 @@ export default class BoardModel extends BoardInformation {
                 controller.down();
                 break;
             case Direction.Up:
-                controller.up();                
+                controller.up();
                 break;
             case Direction.Left:
                 controller.left();
@@ -110,11 +121,5 @@ export default class BoardModel extends BoardInformation {
                 controller.right();
                 break;
         }
-    }
-
-    move(direction: Direction) {
-        this.fall(direction);
-        this.collapse(direction);
-        this.fall(direction);
     }
 }

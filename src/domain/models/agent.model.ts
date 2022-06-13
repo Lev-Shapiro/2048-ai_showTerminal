@@ -3,6 +3,8 @@ import BoardModel from "./board.model";
 
 export default class AgentModel {
     action(board: BoardModel, direction: Direction): void {
-        board.move(direction);
+        board.fall(direction);
+        board.collapse(direction);
+        board.fall(direction);
     }
 }

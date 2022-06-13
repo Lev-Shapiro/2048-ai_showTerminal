@@ -1,6 +1,8 @@
 import { Direction } from "../domain/entities/direction.entity";
 import AgentModel from "../domain/models/agent.model";
+import AiModel from "../domain/models/ai.model";
 import BoardModel from "../domain/models/board.model";
+import loopDirections from "../scripts/loop-directions.script";
 import { Tile } from "./../domain/entities/tile.entity";
 import BoardTestHelpersService from "./board-test-helpers.service";
 
@@ -12,6 +14,7 @@ interface IProps {
 
 function createTest({ direction, tiles, answer }: IProps) {
     const board = new BoardModel();
+    const ai = new AiModel();
     const agentModel = new AgentModel();
 
     board.setTiles(tiles);
@@ -24,7 +27,7 @@ function createTest({ direction, tiles, answer }: IProps) {
 describe("pressing on arrow key", () => {
     const boardTests = new BoardTestHelpersService();
 
-    boardTests.loopDirections((direction) => {
+    loopDirections((direction) => {
         it(`press on ${direction} key`, () => {
             boardTests.loopBoardTemplates((templateName, tiles) => {
                 const templateResult =

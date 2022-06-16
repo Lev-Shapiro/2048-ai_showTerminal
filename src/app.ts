@@ -1,35 +1,39 @@
-import { PlayStatus } from "./domain/entities/play-status.entity";
 import AiModel from "./domain/models/ai.model";
+import BoardModel from "./domain/models/board.model";
 import BeautifyService from "./domain/services/beautify.service";
-import createGame from "./scripts/game-create.script";
+import chalk = require("chalk");
 
-(async () => {
-    let losed = false;
+const ai = new AiModel();
+const beautify = new BeautifyService();
 
-    const ai = new AiModel();
-    const beautify = new BeautifyService();
+/*
+ * agent - 2048 bot
+ * opponent - algorithm which adds random tile every move
+ */
 
-    /*
-     * agent - 2048 bot
-     * opponent - algorithm which adds random tile every move
-     */
+console.log(chalk.blue("game: 2048"));
+console.log(chalk.blue("board: 4 x 4"));
+console.log(chalk.blue("=============="));
 
-    console.log("game: 2048");
-    console.log("board: 4 x 4");
-    console.log("==============");
+const board = new BoardModel();
 
-    const game = createGame();
+board.opponentAction();
+board.opponentAction();
 
-    while (!losed) {
-        console.log("selected board: ", beautify.stringifyBoard(game.board));
+let losed = false;
 
-        const direction = ai.suggest(game);
-        console.log("selected direction: ", direction);
+while (!losed) {
+    const direction = ai.suggest(board);
 
-        if (game.board.checkPlayStatus() === PlayStatus.Loss) {
-            losed = true;
+    board.agentAction(direction);
+    board.opponentAction();
 
-            console.log("Game is ended");
-        }
+    console.log(chalk.magenta("available directions: ") + chalk.cyan(board.findAvailableDirections().length));
+    console.log(chalk.magenta("selected direction: ") + chalk.cyan(direction));
+    console.log(chalk.yellow(beautify.stringifyBoard(board)));
+    if (board.isLosed()) {
+        losed = true;
+
+        console.log(chalk.red("Game is ended"));
     }
-})();
+}

@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import AiModel from "./domain/models/ai.model";
 import BoardModel from "./domain/models/board.model";
 import BeautifyService from "./domain/services/beautify.service";
@@ -28,7 +30,10 @@ while (!losed) {
     board.agentAction(direction);
     board.opponentAction();
 
-    console.log(chalk.magenta("available directions: ") + chalk.cyan(board.findAvailableDirections().length));
+    console.log(
+        chalk.magenta("available directions: "),
+        chalk.cyan(board.findAvailableDirections())
+    );
     console.log(chalk.magenta("selected direction: ") + chalk.cyan(direction));
     console.log(chalk.yellow(beautify.stringifyBoard(board)));
     if (board.isLosed()) {

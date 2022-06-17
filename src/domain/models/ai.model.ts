@@ -9,16 +9,17 @@ interface BoardData {
     reward: number;
 }
 export default class AiModel extends BoardInformation {
+    iterationsMade = 0;
     // private depth: number = 0; //* current depth of search tree
 
-    private placeFactor(board: BoardModel, i: number, j: number): number {
-        const boardWeight = this.getBoardWeight();
+    // private placeFactor(board: BoardModel, i: number, j: number): number {
+    //     const boardWeight = this.getBoardWeight();
 
-        const placeWeight = boardWeight[i][j];
-        const placeValue = board.board[i][j];
+    //     const placeWeight = boardWeight[i][j];
+    //     const placeValue = board.board[i][j];
 
-        return placeValue * placeWeight;
-    }
+    //     return placeValue * placeWeight;
+    // }
 
     private getBoardReward(board: BoardModel) {
         let reward = 0;
@@ -40,16 +41,16 @@ export default class AiModel extends BoardInformation {
         reward += factor2;
 
         // //* third factor
-        for (let i = 0; i < this.BOARD_SIZE; i++) {
-            for (let j = 0; j < this.BOARD_SIZE; j++) {
-                const currPlaceFactor = this.placeFactor(board, i, j),
-                    prevPlaceFactor = this.placeFactor(board, i, j - 1);
+        // for (let i = 0; i < this.BOARD_SIZE; i++) {
+        //     for (let j = 0; j < this.BOARD_SIZE; j++) {
+        //         const currPlaceFactor = this.placeFactor(board, i, j),
+        //             prevPlaceFactor = this.placeFactor(board, i, j - 1);
 
-                if (j != 0 && currPlaceFactor > prevPlaceFactor) {
-                    reward += 1 / Math.pow(this.BOARD_SIZE, 2);
-                }
-            }
-        }
+        //         if (j != 0 && currPlaceFactor > prevPlaceFactor) {
+        //             reward += 1 / Math.pow(this.BOARD_SIZE, 2);
+        //         }
+        //     }
+        // }
 
         return 0.001 + reward;
     }
@@ -66,6 +67,7 @@ export default class AiModel extends BoardInformation {
         return boardCopy
             .findEmptyPlaces()
             .reduce((prevLocalBest, emptyPlaceCoords) => {
+                this.iterationsMade++;
                 const boardCopyA = boardCopy.copy();
                 boardCopyA.setTile(...emptyPlaceCoords, 2);
 
@@ -79,9 +81,9 @@ export default class AiModel extends BoardInformation {
                 };
 
                 const boardCopyBresult: BoardData = {
-                    boardModel: boardCopyA,
+                    boardModel: boardCopyB,
                     direction: nodeDirection,
-                    reward: this.getBoardReward(boardCopyA),
+                    reward: this.getBoardReward(boardCopyB),
                 };
 
                 const localBest =
@@ -109,25 +111,32 @@ export default class AiModel extends BoardInformation {
                 };
             });
 
-        for (var depth = 1; depth <= 80; depth++) {
-            boardCopies.reduce(
-                (
-                    prevBestBoardData,
-                    { direction: originalDirection, boardModel }
-                ) => {
-                    const boardCopy2 = boardModel.copy();
-                    boardCopy2.agentAction(originalDirection);
-
+        for (var depth = 1; depth <= 20; depth++) {
+            boardCopies = boardCopies.map(({ direction: nodeDirection, boardModel }) => {
+                const boardCopy2 = boardModel.copy();
+                
+                return boardCopy2.findAvailableDirections().reduce<BoardData>((prev, directionToEmulate)=>{
+                    boardCopy2.agentAction(directionToEmulate);
+    
                     const bestBoardData = this.bestOpponentMove(
                         boardCopy2,
-                        originalDirection
+                        nodeDirection
                     );
-
-                    return prevBestBoardData.reward > bestBoardData.reward
-                        ? prevBestBoardData
-                        : bestBoardData;
-                }
-            );
+    
+                    if (depth === 20) {
+                        console.log(
+                            "highest tile: ",
+                            bestBoardData.boardModel.findHighestTile()
+                        );
+                    }
+    
+                    return (bestBoardData.reward > prev.reward) ? bestBoardData : prev;
+                }, {
+                    boardModel: boardCopy2,
+                    direction: -1,
+                    reward: -1
+                });
+            });
         }
 
         return boardCopies.reduce((prev, curr) =>

@@ -3,23 +3,44 @@ import { Direction } from "../entities/direction.entity";
 import { BoardInformation } from "./../entities/board.entity";
 import BoardModel from "./board.model";
 
+enum Losed {
+    TRUE,
+}
 interface BoardData {
     direction: Direction;
     boardModel: BoardModel;
     reward: number;
 }
+
 export default class AiModel extends BoardInformation {
     iterationsMade = 0;
     // private depth: number = 0; //* current depth of search tree
 
-    // private placeFactor(board: BoardModel, i: number, j: number): number {
-    //     const boardWeight = this.getBoardWeight();
+    private placeFactor(board: BoardModel, i: number, j: number): number {
+        // const boardWeight = this.getBoardWeight();
 
-    //     const placeWeight = boardWeight[i][j];
-    //     const placeValue = board.board[i][j];
+        // const placeWeight = boardWeight[i][j];
+        const placeValue = board.board[i][j];
 
-    //     return placeValue * placeWeight;
-    // }
+        return placeValue;
+    }
+
+    private snakeShapedMatch(board: BoardModel) {
+        let reward = 0;
+
+        for (let i = 0; i < this.BOARD_SIZE; i++) {
+            for (let j = 0; j < this.BOARD_SIZE; j++) {
+                const currPlaceFactor = this.placeFactor(board, i, j),
+                    prevPlaceFactor = this.placeFactor(board, i, j - 1);
+
+                if (j != 0 && currPlaceFactor > prevPlaceFactor) {
+                    reward += 1 / Math.pow(this.BOARD_SIZE, 2);
+                }
+            }
+        }
+
+        return reward;
+    }
 
     private getBoardReward(board: BoardModel) {
         let reward = 0;
@@ -33,10 +54,11 @@ export default class AiModel extends BoardInformation {
         //* first factor
         reward += board.findEmptyPlaces().length * 0.025;
 
-        // //* second factor
+        //* second factor
         const factor2 =
-            Math.max(...loopDirections((_, d) => board.findMergesCount(d))) *
-            0.0375;
+            loopDirections((_, d) => board.findMergesCount(d)).reduce(
+                (a, b) => a + b
+            ) * 0.0375;
 
         reward += factor2;
 
@@ -91,6 +113,12 @@ export default class AiModel extends BoardInformation {
                         ? boardCopyAresult
                         : boardCopyBresult;
 
+                /* 
+                if prev losed and curr losed => pick by reward
+                if prev losed and curr not losed => pick curr
+                if prev not losed and curr losed => pick prev
+                */
+
                 return prevLocalBest.reward > localBest.reward
                     ? prevLocalBest
                     : localBest;
@@ -111,36 +139,50 @@ export default class AiModel extends BoardInformation {
                 };
             });
 
-        for (var depth = 1; depth <= 20; depth++) {
-            boardCopies = boardCopies.map(({ direction: nodeDirection, boardModel }) => {
-                const boardCopy2 = boardModel.copy();
-                
-                return boardCopy2.findAvailableDirections().reduce<BoardData>((prev, directionToEmulate)=>{
-                    boardCopy2.agentAction(directionToEmulate);
-    
-                    const bestBoardData = this.bestOpponentMove(
-                        boardCopy2,
-                        nodeDirection
-                    );
-    
-                    if (depth === 20) {
-                        console.log(
-                            "highest tile: ",
-                            bestBoardData.boardModel.findHighestTile()
+        for (var depth = 1; depth <= 1000; depth++) {
+            boardCopies = boardCopies.map(
+                ({ direction: nodeDirection, boardModel }) => {
+                    const boardCopy2 = boardModel.copy();
+
+                    return boardCopy2
+                        .findAvailableDirections()
+                        .reduce<BoardData>(
+                            (prev, directionToEmulate) => {
+                                const boardCopy3 = boardCopy2.copy();
+
+                                boardCopy3.agentAction(directionToEmulate);
+
+                                const bestBoardData = this.bestOpponentMove(
+                                    boardCopy3,
+                                    nodeDirection
+                                );
+
+                                if (depth === 1000) {
+                                    console.log(
+                                        "highest tile: ",
+                                        bestBoardData.boardModel.findHighestTile()
+                                    );
+                                }
+
+                                return bestBoardData.reward > prev.reward
+                                    ? bestBoardData
+                                    : prev;
+                            },
+                            {
+                                boardModel: boardCopy2,
+                                direction: -1,
+                                reward: -1,
+                            }
                         );
-                    }
-    
-                    return (bestBoardData.reward > prev.reward) ? bestBoardData : prev;
-                }, {
-                    boardModel: boardCopy2,
-                    direction: -1,
-                    reward: -1
-                });
-            });
+                }
+            );
         }
 
         return boardCopies.reduce((prev, curr) =>
-            curr.reward > prev.reward ? curr : prev
+            this.snakeShapedMatch(curr.boardModel) >
+            this.snakeShapedMatch(prev.boardModel)
+                ? curr
+                : prev
         ).direction;
     }
 }

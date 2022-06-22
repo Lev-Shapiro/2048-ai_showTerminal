@@ -1,46 +1,38 @@
-import loopDirections from "../../scripts/loop-directions.script";
-import { Direction } from "../entities/direction.entity";
-import { BoardInformation } from "./../entities/board.entity";
+// import loopDirections from "../../scripts/loop-directions.script";
+import { BoardInformation } from "../entities/board.entity";
+import { Direction, DirectionNames } from "../entities/direction.entity";
 import BoardModel from "./board.model";
 
-enum Losed {
-    TRUE,
-}
-interface BoardData {
-    direction: Direction;
-    boardModel: BoardModel;
-    reward: number;
-}
+type BoardDepthResults = {
+    [key in DirectionNames]: number;
+};
 
 export default class AiModel extends BoardInformation {
-    iterationsMade = 0;
-    // private depth: number = 0; //* current depth of search tree
+    // private placeFactor(board: BoardModel, i: number, j: number): number {
+    //     // const boardWeight = this.getBoardWeight();
 
-    private placeFactor(board: BoardModel, i: number, j: number): number {
-        // const boardWeight = this.getBoardWeight();
+    //     // const placeWeight = boardWeight[i][j];
+    //     const placeValue = board.board[i][j];
 
-        // const placeWeight = boardWeight[i][j];
-        const placeValue = board.board[i][j];
+    //     return placeValue;
+    // }
 
-        return placeValue;
-    }
+    // private snakeShapedMatch(board: BoardModel) {
+    //     let reward = 0;
 
-    private snakeShapedMatch(board: BoardModel) {
-        let reward = 0;
+    //     for (let i = 0; i < this.BOARD_SIZE; i++) {
+    //         for (let j = 0; j < this.BOARD_SIZE; j++) {
+    //             const currPlaceFactor = this.placeFactor(board, i, j),
+    //                 prevPlaceFactor = this.placeFactor(board, i, j - 1);
 
-        for (let i = 0; i < this.BOARD_SIZE; i++) {
-            for (let j = 0; j < this.BOARD_SIZE; j++) {
-                const currPlaceFactor = this.placeFactor(board, i, j),
-                    prevPlaceFactor = this.placeFactor(board, i, j - 1);
+    //             if (j != 0 && currPlaceFactor > prevPlaceFactor) {
+    //                 reward += 1 / Math.pow(this.BOARD_SIZE, 2);
+    //             }
+    //         }
+    //     }
 
-                if (j != 0 && currPlaceFactor > prevPlaceFactor) {
-                    reward += 1 / Math.pow(this.BOARD_SIZE, 2);
-                }
-            }
-        }
-
-        return reward;
-    }
+    //     return reward;
+    // }
 
     private getBoardReward(board: BoardModel) {
         let reward = 0;
@@ -55,14 +47,14 @@ export default class AiModel extends BoardInformation {
         reward += board.findEmptyPlaces().length * 0.025;
 
         //* second factor
-        const factor2 =
-            loopDirections((_, d) => board.findMergesCount(d)).reduce(
-                (a, b) => a + b
-            ) * 0.0375;
+        // const factor2 =
+        //     loopDirections((_, d) => board.findMergesCount(d)).reduce(
+        //         (a, b) => a + b
+        //     ) * 0.0375;
 
-        reward += factor2;
+        // reward += factor2;
 
-        // //* third factor
+        //* third factor
         // for (let i = 0; i < this.BOARD_SIZE; i++) {
         //     for (let j = 0; j < this.BOARD_SIZE; j++) {
         //         const currPlaceFactor = this.placeFactor(board, i, j),
@@ -77,112 +69,97 @@ export default class AiModel extends BoardInformation {
         return 0.001 + reward;
     }
 
-    bestOpponentMove(board: BoardModel, nodeDirection: Direction): BoardData {
-        const boardCopy = board.copy();
-
-        const boardUnsetDefault: BoardData = {
-            boardModel: boardCopy,
-            direction: -1,
-            reward: -1,
+    suggest(board: BoardModel, maxDepth: number = 2): Direction {
+        let counter = 0;
+        let resultBoards: BoardDepthResults = {
+            Left: -1,
+            Right: -1,
+            Down: -1,
+            Up: -1,
         };
 
-        return boardCopy
-            .findEmptyPlaces()
-            .reduce((prevLocalBest, emptyPlaceCoords) => {
-                this.iterationsMade++;
-                const boardCopyA = boardCopy.copy();
-                boardCopyA.setTile(...emptyPlaceCoords, 2);
+        const directions = Object.keys(resultBoards) as DirectionNames[];
 
-                const boardCopyB = boardCopy.copy();
-                boardCopyB.setTile(...emptyPlaceCoords, 4);
+        //* ndi = node direction index
+        for (var ndi = 0; ndi < 4; ndi++) {
+            const direction = directions[ndi],
+                boardCopy = board.copy();
 
-                const boardCopyAresult: BoardData = {
-                    boardModel: boardCopyA,
-                    direction: nodeDirection,
-                    reward: this.getBoardReward(boardCopyA),
-                };
+            boardCopy.agentAction(Direction[direction]);
 
-                const boardCopyBresult: BoardData = {
-                    boardModel: boardCopyB,
-                    direction: nodeDirection,
-                    reward: this.getBoardReward(boardCopyB),
-                };
+            let avgForDirection = 0;
+            let boardCopies: BoardModel[] = [boardCopy];
 
-                const localBest =
-                    boardCopyAresult.reward > boardCopyBresult.reward
-                        ? boardCopyAresult
-                        : boardCopyBresult;
+            for (var depthCount = 0; depthCount <= maxDepth; depthCount++) {
+                const statesForCurrDepth: BoardModel[] = [];
 
-                /* 
-                if prev losed and curr losed => pick by reward
-                if prev losed and curr not losed => pick curr
-                if prev not losed and curr losed => pick prev
-                */
+                //* bci = board copy index
+                for (var bci = 0; bci < boardCopies.length; bci++) {
+                    const boardCopy2 = boardCopies[bci];
 
-                return prevLocalBest.reward > localBest.reward
-                    ? prevLocalBest
-                    : localBest;
-            }, boardUnsetDefault);
-    }
+                    //* edi = emulated direction index
+                    for (var edi = 0; edi < 4; edi++) {
+                        const boardCopy3 = boardCopy2.copy();
+                        boardCopy3.agentAction(Direction[directions[edi]]);
 
-    suggest(board: BoardModel): Direction {
-        let boardCopies: BoardData[] = board
-            .findAvailableDirections()
-            .map((direction) => {
-                const boardCopy = board.copy();
-                boardCopy.agentAction(direction);
+                        if (boardCopy3.isLosed()) continue;
 
-                return {
-                    direction,
-                    boardModel: boardCopy,
-                    reward: -1,
-                };
-            });
+                        const boardCopy3_emptyPlaces =
+                            boardCopy3.findEmptyPlaces();
 
-        for (var depth = 1; depth <= 1000; depth++) {
-            boardCopies = boardCopies.map(
-                ({ direction: nodeDirection, boardModel }) => {
-                    const boardCopy2 = boardModel.copy();
+                        //* epi = empty place index
+                        for (
+                            var epi = 0;
+                            epi < boardCopy3_emptyPlaces.length;
+                            epi++
+                        ) {
+                            const boardCopy4A = boardCopy3.copy();
+                            boardCopy4A.setTile(
+                                ...boardCopy3_emptyPlaces[epi],
+                                2
+                            );
 
-                    return boardCopy2
-                        .findAvailableDirections()
-                        .reduce<BoardData>(
-                            (prev, directionToEmulate) => {
-                                const boardCopy3 = boardCopy2.copy();
+                            const boardCopy4B = boardCopy3.copy();
+                            boardCopy4B.setTile(
+                                ...boardCopy3_emptyPlaces[epi],
+                                4
+                            );
 
-                                boardCopy3.agentAction(directionToEmulate);
-
-                                const bestBoardData = this.bestOpponentMove(
-                                    boardCopy3,
-                                    nodeDirection
-                                );
-
-                                if (depth === 1000) {
-                                    console.log(
-                                        "highest tile: ",
-                                        bestBoardData.boardModel.findHighestTile()
-                                    );
-                                }
-
-                                return bestBoardData.reward > prev.reward
-                                    ? bestBoardData
-                                    : prev;
-                            },
-                            {
-                                boardModel: boardCopy2,
-                                direction: -1,
-                                reward: -1,
+                            if (depthCount != maxDepth) {
+                                statesForCurrDepth.push(boardCopy4A);
+                                statesForCurrDepth.push(boardCopy4B);
+                            } else {
+                                avgForDirection +=
+                                    (this.getBoardReward(boardCopy4A) +
+                                        this.getBoardReward(boardCopy4B)) /
+                                    2;
                             }
-                        );
+
+                            counter++;
+                        }
+                    }
                 }
-            );
+
+                boardCopies = statesForCurrDepth;
+            }
+
+            avgForDirection /= 2;
+            //* ONLY AFTER THIS LINE YOU CAN USE avgForDirection
+
+            resultBoards[direction] = avgForDirection;
         }
 
-        return boardCopies.reduce((prev, curr) =>
-            this.snakeShapedMatch(curr.boardModel) >
-            this.snakeShapedMatch(prev.boardModel)
-                ? curr
-                : prev
-        ).direction;
+        console.log("counted: ", counter);
+        console.log(resultBoards);
+
+        const bestDirectionName = Object.entries(resultBoards).reduce(
+            (prev, curr) => {
+                return prev[1] > curr[1] ? prev : curr;
+            }
+        )[0] as unknown as DirectionNames;
+
+        console.log("best direction name is: ", bestDirectionName);
+
+        return Direction[bestDirectionName];
     }
 }

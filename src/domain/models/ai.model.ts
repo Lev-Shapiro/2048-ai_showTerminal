@@ -1,20 +1,17 @@
-// import loopDirections from "../../scripts/loop-directions.script";
+// import { PlayStatus } from "./../entities/play-status.entity";
+import loopDirections from "../../scripts/loop-directions.script";
 import { BoardInformation } from "../entities/board.entity";
-import { Direction, DirectionNames } from "../entities/direction.entity";
+import { Direction } from "../entities/direction.entity";
 import BoardModel from "./board.model";
-
-type BoardDepthResults = {
-    [key in DirectionNames]: number;
-};
 
 export default class AiModel extends BoardInformation {
     // private placeFactor(board: BoardModel, i: number, j: number): number {
-    //     // const boardWeight = this.getBoardWeight();
+    //     const boardWeight = this.getBoardWeight();
 
-    //     // const placeWeight = boardWeight[i][j];
+    //     const placeWeight = boardWeight[i][j];
     //     const placeValue = board.board[i][j];
 
-    //     return placeValue;
+    //     return placeValue * placeWeight;
     // }
 
     // private snakeShapedMatch(board: BoardModel) {
@@ -44,15 +41,19 @@ export default class AiModel extends BoardInformation {
          */
 
         //* first factor
-        reward += board.findEmptyPlaces().length * 0.025;
+        reward += board.findEmptyPlaces().length * 0.0625;
+
+        // if (board.board[3][0] === board.findHighestTile()) {
+        //     // console.log("Sanahilwa Yagamil")
+        //     reward += 50;
+        // }
 
         //* second factor
-        // const factor2 =
-        //     loopDirections((_, d) => board.findMergesCount(d)).reduce(
-        //         (a, b) => a + b
-        //     ) * 0.0375;
+        const factor2 =
+            Math.max(...loopDirections((_, d) => board.findMergesCount(d))) *
+            0.250;
 
-        // reward += factor2;
+        reward += factor2;
 
         //* third factor
         // for (let i = 0; i < this.BOARD_SIZE; i++) {
@@ -69,97 +70,141 @@ export default class AiModel extends BoardInformation {
         return 0.001 + reward;
     }
 
-    suggest(board: BoardModel, maxDepth: number = 2): Direction {
-        let counter = 0;
-        let resultBoards: BoardDepthResults = {
-            Left: -1,
-            Right: -1,
-            Down: -1,
-            Up: -1,
-        };
+    counter = 0;
 
-        const directions = Object.keys(resultBoards) as DirectionNames[];
+    recursive(
+        board: BoardModel,
+        depthLimit: number,
+        ignoredSituations: number
+    ) {
+        if (depthLimit === 0) return this.getBoardReward(board);
 
-        //* ndi = node direction index
-        for (var ndi = 0; ndi < 4; ndi++) {
-            const direction = directions[ndi],
-                boardCopy = board.copy();
+        const directions = board.findAvailableDirections();
 
-            boardCopy.agentAction(Direction[direction]);
+        let avgDirection = 0;
 
-            let avgForDirection = 0;
-            let boardCopies: BoardModel[] = [boardCopy];
+    for (var edi = 0; edi < directions.length; edi++) {
+        const emulateDirection = directions[edi];
 
-            for (var depthCount = 0; depthCount <= maxDepth; depthCount++) {
-                const statesForCurrDepth: BoardModel[] = [];
+        const boardCopy = board.copy();
+        boardCopy.agentAction(emulateDirection);
 
-                //* bci = board copy index
-                for (var bci = 0; bci < boardCopies.length; bci++) {
-                    const boardCopy2 = boardCopies[bci];
+        const boardCopy_emptyPlaces = boardCopy.findEmptyPlaces();
 
-                    //* edi = emulated direction index
-                    for (var edi = 0; edi < 4; edi++) {
-                        const boardCopy3 = boardCopy2.copy();
-                        boardCopy3.agentAction(Direction[directions[edi]]);
-
-                        if (boardCopy3.isLosed()) continue;
-
-                        const boardCopy3_emptyPlaces =
-                            boardCopy3.findEmptyPlaces();
-
-                        //* epi = empty place index
-                        for (
-                            var epi = 0;
-                            epi < boardCopy3_emptyPlaces.length;
-                            epi++
-                        ) {
-                            const boardCopy4A = boardCopy3.copy();
-                            boardCopy4A.setTile(
-                                ...boardCopy3_emptyPlaces[epi],
-                                2
-                            );
-
-                            const boardCopy4B = boardCopy3.copy();
-                            boardCopy4B.setTile(
-                                ...boardCopy3_emptyPlaces[epi],
-                                4
-                            );
-
-                            if (depthCount != maxDepth) {
-                                statesForCurrDepth.push(boardCopy4A);
-                                statesForCurrDepth.push(boardCopy4B);
-                            } else {
-                                avgForDirection +=
-                                    (this.getBoardReward(boardCopy4A) +
-                                        this.getBoardReward(boardCopy4B)) /
-                                    2;
-                            }
-
-                            counter++;
-                        }
-                    }
-                }
-
-                boardCopies = statesForCurrDepth;
-            }
-
-            avgForDirection /= 2;
-            //* ONLY AFTER THIS LINE YOU CAN USE avgForDirection
-
-            resultBoards[direction] = avgForDirection;
+        for (
+            var i = 0;
+            i <
+            Math.floor(boardCopy_emptyPlaces.length * ignoredSituations);
+            i++
+        ) {
+            boardCopy_emptyPlaces.splice(
+                Math.floor(Math.random() * boardCopy_emptyPlaces.length),
+                1
+            );
         }
 
-        console.log("counted: ", counter);
-        console.log(resultBoards);
+        //* epi = empty place index
+        for (var epi = 0; epi < boardCopy_emptyPlaces.length; epi++) {
+            const boardCopy4A = boardCopy.copy();
+            boardCopy4A.setTile(...boardCopy_emptyPlaces[epi], 2);
 
-        const bestDirectionName = Object.entries(resultBoards).reduce(
-            (prev, curr) => {
-                return prev[1] > curr[1] ? prev : curr;
+            const boardCopy4B = boardCopy.copy();
+            boardCopy4B.setTile(...boardCopy_emptyPlaces[epi], 4);
+
+            const a: number =
+                this.recursive(
+                    boardCopy4A,
+                    depthLimit - 1,
+                    ignoredSituations
+                ) || 0;
+
+            const b: number =
+                this.recursive(
+                    boardCopy4B,
+                    depthLimit - 1,
+                    ignoredSituations
+                ) || 0;
+
+            this.counter++;
+
+            avgDirection += (a + b) / 2;
+        }
+    }
+
+        return avgDirection;
+    }
+
+    // recursive(board: BoardModel, depthLimit: number): number {
+    //     if (depthLimit === 0) {
+    //         return this.getBoardReward(board);
+    //     }
+
+    //     let loopUntil = 3;
+    //     let result = 0;
+
+    //     for (var i = 0; i < loopUntil; i++) {
+    //         const boardCopy = board.copy();
+    //         const availableDirections = board.findAvailableDirections();
+
+    //         boardCopy.agentAction(
+    //             availableDirections[
+    //                 Math.floor(Math.random() * availableDirections.length)
+    //             ]
+    //         );
+
+    //         const status = boardCopy.opponentAction();
+
+    //         if (status === PlayStatus.Loss) {
+    //             result -= 1;
+
+    //             if (loopUntil < 9) {
+    //                 loopUntil += 4;
+    //             } else {
+    //                 return 0;
+    //             }
+    //         }
+
+    //         const newReward = this.recursive(boardCopy, depthLimit - 1);
+
+    //         if(result < newReward) result = newReward;
+    //     }
+
+    //     return result;
+    // }
+
+    suggest(board: BoardModel) {
+        this.counter = 0;
+        // [number, number] = [Direction, reward];
+        let bestDirection: [Direction | undefined, number] = [undefined, -1];
+        const directions = board.findAvailableDirections();
+
+        //* ndi = node direction index
+        for (var ndi = 0; ndi < directions.length; ndi++) {
+            const nodeDirection = directions[ndi];
+
+            const boardCopy = board.copy();
+            boardCopy.agentAction(nodeDirection);
+            boardCopy.opponentAction();
+
+            let a: number = 3;
+            //     b: number = 0.9;
+
+            // if (boardCopy.findEmptyPlaces().length < 4) {
+            //     a = 4;
+            //     // b = 0.80;
+            // }
+
+            let directionReward: number = this.recursive(boardCopy, a, 0);
+
+            if (bestDirection[1] < directionReward) {
+                bestDirection = [nodeDirection, directionReward];
             }
-        )[0] as unknown as DirectionNames;
+        }
 
-        console.log("best direction name is: ", bestDirectionName);
+        console.log("iterations made: ", this.counter);
+        console.log("best direction: ", directions[bestDirection[0] || 0]);
+        console.log("reward for direction: ", bestDirection[1]);
 
-        return Direction[bestDirectionName];
+        return bestDirection[0];
     }
 }

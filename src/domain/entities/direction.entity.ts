@@ -4,3 +4,5 @@ export enum Direction {
     Down,
     Up
 }
+
+export type DirectionNames = keyof typeof Direction;

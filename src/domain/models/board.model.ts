@@ -1,3 +1,4 @@
+import { PlayStatus } from './../entities/play-status.entity';
 import loopDirections from "../../scripts/loop-directions.script";
 import { Board, BoardInformation } from "../entities/board.entity";
 import { Direction } from "../entities/direction.entity";
@@ -115,12 +116,15 @@ export default class BoardModel extends BoardInformation {
 
         return emptyPlaces2 - emptyPlaces1;
     }
-    
+
     findAvailableDirections() {
         const availableDirections: Direction[] = [];
 
         loopDirections((_, direction) => {
-            if(this.findMergesCount(direction) != 0 || this.findEmptyPlaces().length != 0) {
+            if (
+                this.findMergesCount(direction) != 0 ||
+                this.findEmptyPlaces().length != 0
+            ) {
                 availableDirections.push(direction);
                 return;
             }
@@ -146,10 +150,15 @@ export default class BoardModel extends BoardInformation {
      *------------------------------------------------------------------------**/
 
     agentAction(direction: Direction) {
+        // const axisName =
+        //     direction === Direction.Down || direction === Direction.Up
+        //         ? "vertical"
+        //         : "horizontal";
+
         const axisName =
-            direction === Direction.Down || direction === Direction.Up
-                ? "vertical"
-                : "horizontal";
+        direction === Direction.Down || direction === Direction.Up
+            ? "vertical"
+            : "horizontal";
 
         for (var x = 0; x < this.BOARD_SIZE; x++) {
             let arr = this.getRow(axisName, x),
@@ -179,17 +188,21 @@ export default class BoardModel extends BoardInformation {
         }
     }
 
-    opponentAction() {
+    opponentAction(): PlayStatus {
         const emptyPlaces = this.findEmptyPlaces();
 
-        if (emptyPlaces.length > 0) {
-            const index = Math.floor(Math.random() * emptyPlaces.length);
-
-            this.setTile(
-                emptyPlaces[index][0],
-                emptyPlaces[index][1],
-                this.newRandomTile()
-            );
+        if(emptyPlaces.length === 0) {
+            return PlayStatus.Loss
         }
+
+        const index = Math.floor(Math.random() * emptyPlaces.length);
+
+        this.setTile(
+            emptyPlaces[index][0],
+            emptyPlaces[index][1],
+            this.newRandomTile()
+        );
+
+        return PlayStatus.Playing
     }
 }

@@ -3,7 +3,6 @@ import BoardModel from "./domain/models/board.model";
 import AiModel from "./domain/models/ai.model";
 import BeautifyService from "./domain/services/beautify.service";
 import chalk = require("chalk");
-// import { Direction } from "./domain/entities/direction.entity";
 
 const ai = new AiModel();
 const beautify = new BeautifyService();
@@ -21,10 +20,6 @@ const board = new BoardModel();
 
 board.opponentAction();
 board.opponentAction()
-
-// board.agentAction(Direction.Down)
-
-// console.log(chalk.yellow(beautify.stringifyBoard(board)));
 
 board.opponentAction();
 board.opponentAction();

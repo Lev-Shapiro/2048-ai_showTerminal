@@ -186,15 +186,14 @@ export default class AiModel extends BoardInformation {
             boardCopy.agentAction(nodeDirection);
             boardCopy.opponentAction();
 
-            let a: number = 3;
-            //     b: number = 0.9;
+            let depth: number = 2, ignoreSituations: number = 0.6;
 
-            // if (boardCopy.findEmptyPlaces().length < 4) {
-            //     a = 4;
-            //     // b = 0.80;
-            // }
+            if (boardCopy.findEmptyPlaces().length < 4) {
+                depth = 4;
+                ignoreSituations = 0.80;
+            }
 
-            let directionReward: number = this.recursive(boardCopy, a, 0);
+            let directionReward: number = this.recursive(boardCopy, depth, ignoreSituations);
 
             if (bestDirection[1] < directionReward) {
                 bestDirection = [nodeDirection, directionReward];
